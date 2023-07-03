@@ -1,10 +1,11 @@
-//Inspired from https://github.com/FantoX001/Atlas-MD
-//Made by Guru
-import fetch from 'node-fetch'
-import { sticker } from '../lib/sticker.js'
+import fetch from 'node-fetch';
+import { support, sticker } from '../lib/sticker.js';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 let handler = async (m, { conn, text }) => {
-  let userPfp;
+  let userPfp = 'https://i.imgur.com/8B4jwGq.jpeg'; // use this as the default profile picture
 
   try {
     if (!text && !m.quoted) {
@@ -12,11 +13,11 @@ let handler = async (m, { conn, text }) => {
       return m.reply(`Please provide a text (Type or mention a message)!`);
     }
 
-    let who = m.quoted ? m.quoted.sender : m.mentionedJid && m.mentionedJid[0] ? m.mentionedJid[0] : m.fromMe ? conn.user.jid : m.sender
-    if (!(who in global.db.data.users)) throw '✳️ The user is not found in my database'
-    userPfp = await conn.profilePictureUrl(who, 'image').catch(_ => './Guru.jpg')
-    let user = global.db.data.users[who]
-    let { name } = global.db.data.users[who]
+    let who = m.quoted ? m.quoted.sender : m.mentionedJid && m.mentionedJid[0] ? m.mentionedJid[0] : m.fromMe ? conn.user.jid : m.sender;
+    if (!(who in global.db.data.users)) throw '✳️ The user is not found in my database';
+
+    let user = global.db.data.users[who];
+    let { name } = global.db.data.users[who];
 
     m.react(rwait);
     let quoteText = m.quoted ? m.quoted.msg : text ? text : "";
@@ -25,8 +26,8 @@ let handler = async (m, { conn, text }) => {
       type: "quote",
       format: "png",
       backgroundColor: "#FFFFFF",
-      width: 700,
-      height: 580, // Adjust the height value as desired
+      width: 1800,
+      height: 200, // Adjust the height value as desired
       scale: 2,
       messages: [
         {
@@ -53,17 +54,27 @@ let handler = async (m, { conn, text }) => {
 
     let json = await res.json();
     let bufferImage = Buffer.from(json.result.image, 'base64');
-    let stickerr = await sticker(false, bufferImage, global.packname, global.author);
-    await conn.sendFile(m.chat, stickerr, 'sticker.webp', '', m, { asSticker: true });
+
+    // Save the bufferImage to a file
+    let tempImagePath = path.join(os.tmpdir(), 'tempImage.png');
+    fs.writeFileSync(tempImagePath, bufferImage);
+
+    // Send the image as a file
+    await conn.sendFile(m.chat, tempImagePath, 'quote.png', 'Here is the quote image:', m);
+
+    // Delete the temp file after using
+    fs.unlinkSync(tempImagePath);
+
     m.react("🤡");
+
   } catch (e) {
-    m.react("🤡")
-  } 
-}
+    console.error(e);
+    m.react("😭");
+  }
+};
+
 handler.help = ['quote'];
 handler.tags = ['fun'];
 handler.command = ['quote'];
 
 export default handler;
-
-
